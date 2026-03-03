@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expense Split</title>
+<style>
+  :root {
+    --cyan: #00e5c8;
+    --pink: #ff4d8d;
+    --gold: #ffc84a;
+    --green: #4ade80;
+    --glass: rgba(255,255,255,0.07);
+    --glass-b: rgba(255,255,255,0.13);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    background: #060d1a;
+    color: #fff;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 70% 55% at 15% 15%, rgba(100,20,180,0.4) 0%, transparent 65%),
+      radial-gradient(ellipse 55% 55% at 85% 85%, rgba(0,200,170,0.22) 0%, transparent 65%),
+      radial-gradient(ellipse 45% 45% at 55% 5%,  rgba(255,60,120,0.15) 0%, transparent 60%);
+    pointer-events:none; z-index:0;
+  }
+
+  .wrap { position:relative; z-index:1; max-width:920px; margin:0 auto; padding:36px 18px 80px; }
+
+  header { text-align:center; margin-bottom:40px; }
+  header h1 { font-size: clamp(1.9rem,4.5vw,2.9rem); font-weight:700; letter-spacing:-0.5px; }
+  header h1 span { color: var(--cyan); }
+  header p { margin-top:7px; color:rgba(255,255,255,0.42); font-size:0.92rem; }
+
+  .card {
+    background: var(--glass);
+    border: 1px solid var(--glass-b);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-radius: 18px;
+    padding: 26px 28px;
+    margin-bottom: 22px;
+  }
+
+  .card-title {
+    font-size:0.7rem; font-weight:700; letter-spacing:3px;
+    text-transform:uppercase; color:var(--cyan); margin-bottom:18px;
+  }
+
+  .members-grid {
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px;
+  }
+  .member-wrap { display:flex; flex-direction:column; gap:5px; }
+  .member-wrap label { font-size:0.7rem; color:rgba(255,255,255,0.4); letter-spacing:1.5px; text-transform:uppercase; }
+  .member-wrap input {
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12);
+    border-radius:9px; padding:9px 13px; color:#fff;
+    font-family:inherit; font-size:0.88rem; outline:none;
+    transition:border-color 0.2s;
+  }
+  .member-wrap input:focus { border-color:var(--cyan); background:rgba(0,229,200,0.06); }
+
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+  .form-row3 { display:grid; grid-template-columns:2fr 1fr; gap:12px; margin-bottom:14px; }
+
+  @media(max-width:580px) {
+    .form-row, .form-row3 { grid-template-columns:1fr; }
+  }
+
+  .field { display:flex; flex-direction:column; gap:5px; }
+  .field label { font-size:0.7rem; color:rgba(255,255,255,0.4); letter-spacing:1.5px; text-transform:uppercase; }
+  .field select, .field input {
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12);
+    border-radius:9px; padding:10px 13px; color:#fff;
+    font-family:inherit; font-size:0.88rem; outline:none;
+    transition:border-color 0.2s;
+  }
+  .field select option { background:#0d1b2a; }
+  .field select:focus, .field input:focus { border-color:var(--pink); background:rgba(255,77,141,0.06); }
+
+  .split-box {
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+    border-radius:9px; padding:12px 14px; margin-bottom:14px;
+  }
+  .split-box-top {
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;
+  }
+  .split-box-top span { font-size:0.7rem; color:rgba(255,255,255,0.4); letter-spacing:1.5px; text-transform:uppercase; }
+  .toggle-links { display:flex; gap:10px; }
+  .toggle-links a { font-size:0.72rem; color:var(--cyan); cursor:pointer; text-decoration:underline; }
+
+  .members-check { display:flex; flex-wrap:wrap; gap:8px; }
+  .check-pill {
+    display:flex; align-items:center; gap:6px;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+    border-radius:20px; padding:6px 12px; cursor:pointer;
+    transition:all 0.2s; user-select:none; font-size:0.82rem;
+  }
+  .check-pill input[type=checkbox] { display:none; }
+  .check-pill.active { background:rgba(0,229,200,0.12); border-color:var(--cyan); color:var(--cyan); }
+  .check-pill .dot { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.25); flex-shrink:0; }
+  .check-pill.active .dot { background:var(--cyan); }
+
+  .btn-add {
+    width:100%; padding:12px;
+    background:linear-gradient(135deg, #ff4d8d, #7b2fbe);
+    border:none; border-radius:10px; color:#fff;
+    font-family:inherit; font-size:0.9rem; font-weight:600;
+    cursor:pointer; letter-spacing:0.5px;
+    transition:transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-add:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(255,77,141,0.38); }
+
+  .exp-list { display:flex; flex-direction:column; gap:9px; }
+  .exp-item {
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.09);
+    border-radius:12px; padding:13px 16px;
+    animation:fadeSlide 0.28s ease;
+  }
+  @keyframes fadeSlide { from{opacity:0;transform:translateY(-7px)} to{opacity:1;transform:translateY(0)} }
+
+  .exp-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .exp-meta { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .exp-payer { font-size:0.75rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; }
+  .exp-desc { font-size:0.9rem; color:rgba(255,255,255,0.82); }
+  .exp-amount { font-size:1.05rem; font-weight:700; color:var(--gold); }
+  .exp-right { display:flex; align-items:center; gap:14px; }
+  .exp-split-to { font-size:0.73rem; color:rgba(255,255,255,0.38); }
+  .btn-del { background:none; border:none; color:rgba(255,255,255,0.22); font-size:1rem; cursor:pointer; transition:color 0.2s; }
+  .btn-del:hover { color:var(--pink); }
+
+  .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+  @media(max-width:480px) { .stats-row { grid-template-columns:1fr 1fr; } }
+  .stat-box {
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+    border-radius:13px; padding:16px 18px;
+  }
+  .stat-box .sl { font-size:0.68rem; color:rgba(255,255,255,0.38); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px; }
+  .stat-box .sv { font-size:1.25rem; font-weight:700; color:var(--cyan); }
+
+  .member-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+  .member-table th {
+    text-align:left; padding:8px 12px; font-size:0.68rem;
+    color:rgba(255,255,255,0.35); letter-spacing:2px; text-transform:uppercase;
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .member-table td { padding:11px 12px; border-bottom:1px solid rgba(255,255,255,0.05); }
+  .member-table tr:last-child td { border-bottom:none; }
+  .member-table tr:hover td { background:rgba(255,255,255,0.03); }
+
+  .badge {
+    display:inline-block; font-size:0.72rem; font-weight:600;
+    padding:3px 10px; border-radius:20px; letter-spacing:0.5px;
+  }
+  .badge-owed { background:rgba(74,222,128,0.15); color:var(--green); border:1px solid rgba(74,222,128,0.25); }
+  .badge-owes { background:rgba(255,77,141,0.15); color:var(--pink); border:1px solid rgba(255,77,141,0.25); }
+  .badge-even { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.35); border:1px solid rgba(255,255,255,0.1); }
+
+  .progress-track { height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; margin-top:4px; }
+  .progress-fill { height:100%; border-radius:3px; transition:width 0.5s ease; }
+
+  .settle-list { display:flex; flex-direction:column; gap:9px; }
+  .settle-item {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:rgba(255,77,141,0.07); border:1px solid rgba(255,77,141,0.18);
+    border-radius:11px; padding:13px 16px; font-size:0.88rem;
+  }
+  .settle-from { font-weight:600; }
+  .settle-arrow { color:var(--pink); font-size:1rem; }
+  .settle-to { font-weight:600; color:var(--cyan); }
+  .settle-amt { margin-left:auto; font-weight:700; color:var(--gold); font-size:0.97rem; }
+
+  .empty { text-align:center; padding:22px; color:rgba(255,255,255,0.25); font-size:0.88rem; }
+
+  .btn-reset {
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+    border-radius:9px; padding:9px 20px; color:rgba(255,255,255,0.45);
+    font-family:inherit; font-size:0.83rem; cursor:pointer; transition:all 0.2s;
+    margin-top:8px;
+  }
+  .btn-reset:hover { background:rgba(255,255,255,0.1); color:#fff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Expense <span>Split</span></h1>
+    <p>Track who paid, who owes, and how to settle up — in PKR</p>
+  </header>
+
+  <!-- Members -->
+  <div class="card">
+    <div class="card-title">👥 Group Members</div>
+    <div class="members-grid" id="membersGrid"></div>
+  </div>
+
+  <!-- Add Expense -->
+  <div class="card">
+    <div class="card-title">➕ Add Expense</div>
+    <div class="form-row">
+      <div class="field">
+        <label>Paid By</label>
+        <select id="paidBy" onchange="updatePaidByHighlight()"></select>
+      </div>
+      <div class="field">
+        <label>Amount (PKR)</label>
+        <input type="number" id="expAmount" placeholder="e.g. 2500" min="1">
+      </div>
+    </div>
+    <div class="form-row3">
+      <div class="field">
+        <label>Description</label>
+        <input type="text" id="expDesc" placeholder="e.g. Dinner, Fuel, Hotel…">
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="expCat">
+          <option>🍽️ Food</option>
+          <option>⛽ Fuel</option>
+          <option>🏨 Stay</option>
+          <option>🛒 Shopping</option>
+          <option>🎉 Fun</option>
+          <option>🚕 Travel</option>
+          <option>💊 Health</option>
+          <option>📦 Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="split-box">
+      <div class="split-box-top">
+        <span>Split Between (select members)</span>
+        <div class="toggle-links">
+          <a onclick="selectAll()">All</a>
+          <a onclick="exceptPayer()">Except Payer</a>
+          <a onclick="clearAll()">None</a>
+        </div>
+      </div>
+      <div class="members-check" id="splitChecks"></div>
+    </div>
+
+    <button class="btn-add" onclick="addExpense()">+ Add Expense</button>
+  </div>
+
+  <!-- Expense Log -->
+  <div class="card">
+    <div class="card-title">📋 Expense Log</div>
+    <div class="exp-list" id="expList">
+      <div class="empty">No expenses yet. Add one above ☝️</div>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="card">
+    <div class="card-title">📊 Summary</div>
+    <div class="stats-row" id="statsRow">
+      <div class="stat-box"><div class="sl">Total Expenses</div><div class="sv">PKR 0</div></div>
+      <div class="stat-box"><div class="sl">No. of Expenses</div><div class="sv">0</div></div>
+      <div class="stat-box"><div class="sl">Members</div><div class="sv">5</div></div>
+    </div>
+
+    <div class="card-title">Member Breakdown</div>
+    <div style="overflow-x:auto">
+      <table class="member-table">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Contributed</th>
+            <th>Share Owed</th>
+            <th>Net Balance</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="memberTbody">
+          <tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.25);padding:20px">Add expenses to see breakdown</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-title" style="margin-top:26px">💸 Who Pays Whom</div>
+    <div class="settle-list" id="settleList">
+      <div class="empty">Add expenses to calculate settlements.</div>
+    </div>
+    <br>
+    <button class="btn-reset" onclick="resetExpenses()">🔄 Clear All Expenses</button>
+  </div>
+
+</div>
+<script>
+const COLORS = ['#00e5c8','#ff4d8d','#ffc84a','#4ade80','#a78bfa','#fb923c','#38bdf8'];
+let members = ['Anas','Sakhawat','Moeid','Saim','Haris'];
+let expenses = [];
+
+const gc = i => COLORS[i % COLORS.length];
+const fmt = n => Math.round(n).toLocaleString();
+
+function renderMembers(){
+  document.getElementById('membersGrid').innerHTML = members.map((m,i)=>`
+    <div class="member-wrap">
+      <label style="color:${gc(i)}">Member ${i+1}</label>
+      <input type="text" value="${m}" onchange="renameMember(${i},this.value)" placeholder="Name">
+    </div>`).join('');
+  renderPaidBy();
+  renderSplitChecks();
+  renderAll();
+}
+
+function renameMember(i,v){
+  members[i] = v.trim() || `Member ${i+1}`;
+  renderPaidBy(); renderSplitChecks(); renderExpList(); renderAll();
+}
+
+function renderPaidBy(){
+  const sel = document.getElementById('paidBy');
+  const cur = sel.value;
+  sel.innerHTML = members.map((m,i)=>`<option value="${i}"${cur==i?' selected':''}>${m}</option>`).join('');
+}
+
+function renderSplitChecks(){
+  document.getElementById('splitChecks').innerHTML = members.map((m,i)=>`
+    <label class="check-pill active" id="pill_${i}" onclick="togglePill(${i})">
+      <input type="checkbox" id="chk_${i}" checked>
+      <span class="dot"></span>${m}
+    </label>`).join('');
+}
+
+function togglePill(i){
+  const chk = document.getElementById(`chk_${i}`);
+  const pill = document.getElementById(`pill_${i}`);
+  chk.checked = !chk.checked;
+  pill.classList.toggle('active', chk.checked);
+}
+
+function selectAll(){ members.forEach((_,i)=>{ document.getElementById(`chk_${i}`).checked=true; document.getElementById(`pill_${i}`).classList.add('active'); }); }
+function clearAll(){ members.forEach((_,i)=>{ document.getElementById(`chk_${i}`).checked=false; document.getElementById(`pill_${i}`).classList.remove('active'); }); }
+function exceptPayer(){
+  const p = parseInt(document.getElementById('paidBy').value);
+  members.forEach((_,i)=>{ const on=i!==p; document.getElementById(`chk_${i}`).checked=on; document.getElementById(`pill_${i}`).classList.toggle('active',on); });
+}
+function updatePaidByHighlight(){}
+
+function getSplit(){ return members.map((_,i)=>document.getElementById(`chk_${i}`).checked?i:-1).filter(x=>x>=0); }
+
+function addExpense(){
+  const paidBy = parseInt(document.getElementById('paidBy').value);
+  const amount = parseFloat(document.getElementById('expAmount').value);
+  const desc   = document.getElementById('expDesc').value.trim() || 'Expense';
+  const cat    = document.getElementById('expCat').value;
+  const splitTo= getSplit();
+  const amtEl  = document.getElementById('expAmount');
+
+  if(!amount||amount<=0){ amtEl.style.borderColor='var(--pink)'; setTimeout(()=>amtEl.style.borderColor='',1000); return; }
+  if(!splitTo.length){ alert('Select at least one member to split with.'); return; }
+
+  expenses.push({ id:Date.now(), paidBy, amount, desc, cat, splitTo });
+  amtEl.value = '';
+  document.getElementById('expDesc').value = '';
+  selectAll();
+  renderExpList();
+  renderAll();
+}
+
+function deleteExp(id){
+  expenses = expenses.filter(e=>e.id!==id);
+  renderExpList(); renderAll();
+}
+
+function renderExpList(){
+  const el = document.getElementById('expList');
+  if(!expenses.length){ el.innerHTML='<div class="empty">No expenses yet. Add one above ☝️</div>'; return; }
+  el.innerHTML = [...expenses].reverse().map(e=>`
+    <div class="exp-item">
+      <div class="exp-top">
+        <div class="exp-meta">
+          <span class="exp-payer" style="color:${gc(e.paidBy)}">${members[e.paidBy]}</span>
+          <span class="exp-desc">${e.cat} ${e.desc}</span>
+        </div>
+        <div class="exp-right">
+          <span class="exp-amount">PKR ${fmt(e.amount)}</span>
+          <button class="btn-del" onclick="deleteExp(${e.id})">✕</button>
+        </div>
+      </div>
+      <div class="exp-split-to">Split between: ${e.splitTo.map(i=>members[i]).join(', ')} &nbsp;·&nbsp; PKR ${fmt(e.amount/e.splitTo.length)} each</div>
+    </div>`).join('');
+}
+
+function calcBalances(){
+  const n = members.length;
+  const paid = new Array(n).fill(0);
+  const owed = new Array(n).fill(0);
+  expenses.forEach(e=>{
+    paid[e.paidBy] += e.amount;
+    const share = e.amount / e.splitTo.length;
+    e.splitTo.forEach(i=> owed[i] += share);
+  });
+  return { paid, owed, balance: paid.map((p,i)=>p-owed[i]) };
+}
+
+function renderAll(){
+  const { paid, owed, balance } = calcBalances();
+  const totalExp = expenses.reduce((s,e)=>s+e.amount,0);
+
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-box"><div class="sl">Total Expenses</div><div class="sv">PKR ${fmt(totalExp)}</div></div>
+    <div class="stat-box"><div class="sl">No. of Expenses</div><div class="sv">${expenses.length}</div></div>
+    <div class="stat-box"><div class="sl">Members</div><div class="sv">${members.length}</div></div>`;
+
+  const tbody = document.getElementById('memberTbody');
+  if(!expenses.length){
+    tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.25);padding:20px">Add expenses to see breakdown</td></tr>`;
+  } else {
+    tbody.innerHTML = members.map((m,i)=>{
+      const b = balance[i];
+      const pct = Math.round((paid[i]/Math.max(totalExp,1))*100);
+      const bLabel = b>0.5?`Gets back PKR ${fmt(b)}`:b<-0.5?`Owes PKR ${fmt(-b)}`:'Settled ✓';
+      const bc = b>0.5?'badge-owed':b<-0.5?'badge-owes':'badge-even';
+      const bColor = b>0.5?'var(--green)':b<-0.5?'var(--pink)':'rgba(255,255,255,0.35)';
+      return `<tr>
+        <td><strong style="color:${gc(i)}">${m}</strong></td>
+        <td>
+          <div>PKR ${fmt(paid[i])}</div>
+          <div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${gc(i)}"></div></div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.35);margin-top:3px">${pct}% of total</div>
+        </td>
+        <td>PKR ${fmt(owed[i])}</td>
+        <td style="font-weight:600;color:${bColor}">${b>=0?'+':'-'} PKR ${fmt(Math.abs(b))}</td>
+        <td><span class="badge ${bc}">${bLabel}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Settlements
+  const sl = document.getElementById('settleList');
+  if(!expenses.length){ sl.innerHTML='<div class="empty">Add expenses to calculate settlements.</div>'; return; }
+
+  const cred = members.map((_,i)=>({i,b:+balance[i].toFixed(2)})).filter(x=>x.b>0.5).sort((a,b)=>b.b-a.b);
+  const debt = members.map((_,i)=>({i,b:+balance[i].toFixed(2)})).filter(x=>x.b<-0.5).sort((a,b)=>a.b-b.b);
+  const settles = [];
+  let ci=0, di=0;
+  while(ci<cred.length && di<debt.length){
+    const c=cred[ci], d=debt[di];
+    const amt = Math.min(c.b, -d.b);
+    if(amt>0.5) settles.push({from:d.i, to:c.i, amount:amt});
+    c.b-=amt; d.b+=amt;
+    if(c.b<0.5)ci++; if(d.b>-0.5)di++;
+  }
+
+  if(!settles.length){ sl.innerHTML='<div class="empty">🎉 Everyone is settled up!</div>'; return; }
+  sl.innerHTML = settles.map(s=>`
+    <div class="settle-item">
+      <span class="settle-from" style="color:${gc(s.from)}">${members[s.from]}</span>
+      <span class="settle-arrow">→</span>
+      <span class="settle-to">${members[s.to]}</span>
+      <span style="font-size:0.78rem;color:rgba(255,255,255,0.3)">needs to pay</span>
+      <span class="settle-amt">PKR ${fmt(s.amount)}</span>
+    </div>`).join('');
+}
+
+function resetExpenses(){
+  if(confirm('Clear all expenses?')){ expenses=[]; renderExpList(); renderAll(); }
+}
+
+renderMembers();
+</script>
+</body>
+</html>
