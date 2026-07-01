@@ -335,7 +335,7 @@
 </div>
 <script>
 const COLORS = ['#00e5c8','#ff4d8d','#ffc84a','#4ade80','#a78bfa','#fb923c','#38bdf8'];
-let members = ['Anas','Sakhawat','Abdul Moeid','Saim','Haris'];
+let members = [];
 let expenses = [];
 
 const gc = i => COLORS[i % COLORS.length];
@@ -349,19 +349,28 @@ function saveData() {
 function loadData() {
   const m = localStorage.getItem('split_members');
   const e = localStorage.getItem('split_expenses');
-  if (m) members = JSON.parse(m);
+  if (m) {
+    members = JSON.parse(m);
+  } else {
+    members = [];
+  }
   if (e) expenses = JSON.parse(e);
 }
 
 function renderMembers(){
-  let html = members.map((m,i)=>`
-    <div class="member-wrap">
-      <label style="color:${gc(i)}">Member ${i+1}</label>
-      <div class="member-input-row">
-        <input type="text" value="${m}" onchange="renameMember(${i},this.value)" placeholder="Name">
-        <button class="btn-remove-member" onclick="removeMember(${i})" title="Remove Member">✕</button>
-      </div>
-    </div>`).join('');
+  let html = '';
+  if (members.length === 0) {
+    html = `<div style="grid-column: 1 / -1; text-align: center; color: rgba(255,255,255,0.35); font-size: 0.88rem; padding: 15px 0;">No members added yet. Click below to add group members!</div>`;
+  } else {
+    html = members.map((m,i)=>`
+      <div class="member-wrap">
+        <label style="color:${gc(i)}">Member ${i+1}</label>
+        <div class="member-input-row">
+          <input type="text" value="${m}" onchange="renameMember(${i},this.value)" placeholder="Name">
+          <button class="btn-remove-member" onclick="removeMember(${i})" title="Remove Member">✕</button>
+        </div>
+      </div>`).join('');
+  }
   
   html += `<button class="btn-add-member" onclick="addMember()">➕ Add Member</button>`;
   
@@ -647,7 +656,7 @@ function resetExpenses(){
 
 function resetAppData() {
   if(confirm('Are you sure you want to reset all data (including custom member names and all expenses)?')){
-    members = ['Anas','Sakhawat','Moeid','Saim','Haris'];
+    members = [];
     expenses = [];
     saveData();
     renderMembers();
